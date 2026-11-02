@@ -1,0 +1,27 @@
+TRAIL & HISTORY ROAD-TRIP PLANNER — GITHUB PAGES DEPLOYMENT
+
+This package contains the repaired mobile map build.
+
+UPLOAD THESE ITEMS TO THE ROOT OF YOUR GITHUB REPOSITORY:
+  .nojekyll
+  index.html
+  assets/
+  DEPLOY_TO_GITHUB_PAGES.txt
+
+The optional trip_planner_single_file_optional.html is included for reference. GitHub Pages should open index.html.
+
+GITHUB PAGES SETTINGS
+1. Open the repository on GitHub.
+2. Select Settings.
+3. Select Pages.
+4. Under Build and deployment, choose Deploy from a branch.
+5. Choose the main branch and /(root), then Save.
+6. Open the HTTPS address GitHub provides.
+
+IMPORTANT
+- Extract this ZIP first. Upload its contents, not the ZIP file itself.
+- Test the HTTPS GitHub Pages address on the phone. Do not open index.html from the phone's Downloads folder for production map testing.
+- The primary map uses the exact OpenStreetMap tile endpoint with a valid hosted-page referrer.
+- If that service returns HTTP 403, the app tries the topographic backup automatically.
+- If both services are unavailable, route lines and markers remain usable on the offline planning canvas.
+- After replacing an older deployment, hard-refresh the page or clear the site's cached data if old blocked tiles remain visible.

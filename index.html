@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<meta content="strict-origin-when-cross-origin" name="referrer"/>
+<meta content="Interactive road-trip planner for parks, history, scenery, and interesting stops." name="description"/>
+<title>Trail &amp; History Road-Trip Planner</title>
+<!-- The map engine and its required styles are embedded so locally opened mobile files do not depend on a CDN. Internet access is still required for map tiles, routing, geocoding, and route searches. -->
+<link rel="stylesheet" href="assets/css/00-map-fallback.css">
+<link rel="stylesheet" href="assets/css/10-app.css">
+</head>
+<body>
+<div class="mobile-runtime-warning" id="mobileRuntimeWarning" role="alert">
+  Interactive controls are not active in this file preview. Download the HTML and open it in Safari, Chrome, Edge, or Firefox rather than a document preview.
+</div>
+<nav class="mobile-fixed-nav" id="mobileFixedNav" aria-label="Mobile trip planner navigation">
+  <a class="mobile-fixed-nav__map" href="#tripMapTop" aria-label="Back to map">↑ Back to map</a>
+  <a href="#mobilePlanAnchor">Plan</a>
+  <a href="#mobileItineraryAnchor">Itinerary</a>
+  <a href="#mobileExploreAnchor">Explore</a>
+</nav>
+<noscript><div class="mobile-noscript-warning">This planner requires JavaScript. Open the downloaded HTML in a full web browser; mobile document previews may disable interactive controls.</div></noscript>
+<main class="app-shell">
+<section aria-label="Trip planning controls" class="planner-panel">
+<section class="print-only print-trip-cover" id="printTripCover" aria-label="Printable trip cover">
+  <header class="print-trip-header">
+    <h1 id="printTripTitle">Road-trip itinerary</h1>
+    <p class="print-trip-subtitle" id="printTripSubtitle"></p>
+    <p class="print-trip-date-range" id="printTripDateRange"></p>
+  </header>
+  <div class="print-metric-grid" id="printTripMetrics"></div>
+  <div class="print-route-card">
+    <div class="print-route-heading"><strong>Route overview</strong><span id="printRouteSource"></span></div>
+    <div class="print-route-overview" id="printRouteOverview" role="img" aria-label="Centered overview of the planned route"></div>
+  </div>
+  <p class="print-route-note">Planning overview only. Verify navigation, closures, weather, fuel, and park access before travel.</p>
+</section>
+<header class="brand">
+<h1>Trail &amp; History Road-Trip Planner</h1>
+<p>Explore candidate stops first, then build a driving route between independently selected start and end locations.</p>
+<p class="build-version">Mobile map policy repair build 3 · compliant HTTPS tiles + automatic topographic/offline fallback</p>
+</header>
+<nav aria-label="Planner section controls" class="panel-section-toolbar">
+<span class="panel-section-label">Planner sections</span>
+<div class="panel-section-actions">
+<button class="btn-light btn-compact" id="openEssentialsBtn" type="button">Essentials</button>
+<button class="btn-light btn-compact" id="expandAllSectionsBtn" type="button">Open all</button>
+<button class="btn-light btn-compact" id="collapseAllSectionsBtn" type="button">Collapse all</button>
+</div>
+</nav>
+<nav class="app-tabs" aria-label="Planner workspace">
+  <button class="app-tab" type="button" data-app-tab-button="plan" aria-selected="true">Plan <span class="app-tab-badge" id="planTabBadge">1</span></button>
+  <button class="app-tab" type="button" data-app-tab-button="itinerary" aria-selected="false">Itinerary <span class="app-tab-badge" id="itineraryTabBadge">0</span></button>
+  <button class="app-tab" type="button" data-app-tab-button="explore" aria-selected="false">Explore <span class="app-tab-badge" id="exploreTabBadge">214</span></button>
+</nav>
+<div class="sticky-trip-snapshot" id="enhancedTripSnapshot" aria-live="polite">
+  <div class="snapshot-empty">Set your endpoints and build a route. The compact trip summary will stay visible here.</div>
+</div>
+
+<section class="card collapsible-card enhancement-card" data-default-open="true" data-section-id="enhanced-library" data-enhanced-card="library" data-app-tab="plan">
+  <div class="collapsible-heading">
+    <div class="collapsible-title-wrap"><h2>Trip library &amp; sharing</h2></div>
+    <div class="collapsible-heading-actions"><span class="section-chip">Save + share</span><button aria-expanded="true" class="section-toggle" data-section-toggle="enhanced-library" type="button"><span class="toggle-label">Hide</span><span aria-hidden="true" class="toggle-chevron">▴</span></button></div>
+  </div>
+  <div class="collapsible-body">
+    <div class="save-row">
+      <div class="field"><label for="enhancedTripName">Trip name</label><input id="enhancedTripName" value="My road trip" maxlength="80"></div>
+      <button class="btn-primary" id="saveTripBtn" type="button">Save trip</button>
+    </div>
+    <div class="compact-grid" style="margin-top:9px">
+      <div class="field"><label for="savedTripsSelect">Saved trips in this browser</label><select id="savedTripsSelect"><option value="">No saved trips yet</option></select></div>
+      <div class="field"><label for="importTripFile">Import a trip file</label><input id="importTripFile" type="file" accept="application/json,.json"></div>
+    </div>
+    <div class="button-wrap" style="margin-top:8px">
+      <button class="btn-light btn-small" id="loadTripBtn" type="button">Load</button>
+      <button class="btn-light btn-small" id="duplicateTripBtn" type="button">Duplicate</button>
+      <button class="btn-danger btn-small" id="deleteTripBtn" type="button">Delete saved</button>
+      <button class="btn-light btn-small" id="newTripBtn" type="button">New trip</button>
+      <button class="btn-light btn-small" id="exportTripJsonBtn" type="button">Export JSON</button>
+      <button class="btn-gold btn-small" id="shareTripBtn" type="button">Create share link</button>
+    </div>
+    <textarea class="share-output hidden" id="shareTripOutput" readonly aria-label="Shareable trip link"></textarea>
+    <div class="local-only-note" style="margin-top:9px">Saved trips, reservation notes, and confirmation numbers remain in this browser unless you export or share the trip. No account or server is required.</div>
+    <div class="status" id="tripLibraryStatus" role="status" aria-live="polite"></div>
+    <div class="download-ready-area" id="tripFileDownloadArea" role="status" aria-live="polite"></div>
+  </div>
+</section>
+
+<section aria-labelledby="browse-stops-title" class="card collapsible-card" data-default-open="true" data-section-id="browse" id="mobileExploreAnchor"><div class="collapsible-heading"><div class="collapsible-title-wrap"><h2 id="browse-stops-title">Browse 214 U.S. destinations</h2></div><div class="collapsible-heading-actions"><span class="destination-count-badge">214 stops loaded</span><button aria-controls="browse-section-body" aria-expanded="true" class="section-toggle" data-section-toggle="browse" type="button"><span class="toggle-label">Hide</span><span aria-hidden="true" class="toggle-chevron">▴</span></button></div></div><div class="collapsible-body" id="browse-section-body">
+
+<p class="helper"><strong>This is the nationwide stop selector.</strong> Search or filter parks, historic sites, scenic areas, and cultural destinations across the contiguous United States. Before a route exists, use <em>Add as must-see</em>; after route creation, use <em>Add to route</em>.</p>
+<div class="browser-toolbar">
+<div class="field">
+<label for="stopSearch">Search destinations</label>
+<input autocomplete="off" id="stopSearch" placeholder="Park, city, state, history, waterfall…" type="search"/>
+</div>
+<div class="field">
+<label for="stopSort">Sort results</label>
+<select id="stopSort">
+<option selected="" value="distance">Best fit between start and end</option>
+<option value="priority">Highest priority</option>
+<option value="name">Name A–Z</option>
+</select>
+</div>
+</div>
+<div class="browser-filters">
+<div class="field">
+<label for="stopRegion">U.S. region</label>
+<select id="stopRegion"><option value="all">All regions</option></select>
+</div>
+<div class="field">
+<label for="stopCategory">Stop type</label>
+<select id="stopCategory">
+<option value="all">All types</option>
+<option value="parks">National parks &amp; monuments</option>
+<option value="history">Historic &amp; cultural</option>
+<option value="scenery">Scenic &amp; state parks</option>
+</select>
+</div>
+<div class="field">
+<label for="stopResultLimit">Number of results to display</label>
+<select id="stopResultLimit">
+<option value="20">20</option>
+<option selected="" value="40">40</option>
+<option value="80">80</option>
+</select>
+</div>
+</div>
+<div class="button-row">
+<button class="btn-gold" id="zoomFilteredStopsBtn" type="button">Show filtered stops on map</button>
+<button class="btn-light" id="clearStopFiltersBtn" type="button">Clear filters</button>
+</div>
+<div aria-live="polite" class="status" id="stopBrowserStatus" role="status"></div>
+<div class="browser-count" id="stopBrowserCount"></div>
+<div class="browser-results" id="stopBrowserContent"></div>
+</div></section>
+<section aria-labelledby="trip-input-title" class="card collapsible-card" data-default-open="true" data-section-id="trip" id="mobilePlanAnchor"><div class="collapsible-heading"><div class="collapsible-title-wrap"><h2 id="trip-input-title">Plan your trip</h2></div><div class="collapsible-heading-actions"><span class="section-chip">Setup</span><button aria-controls="trip-section-body" aria-expanded="true" class="section-toggle" data-section-toggle="trip" type="button"><span class="toggle-label">Hide</span><span aria-hidden="true" class="toggle-chevron">▴</span></button></div></div><div class="collapsible-body" id="trip-section-body">
+
+<p class="helper">The map starts with interesting places only. No route or itinerary appears until you create one.</p>
+<div class="form-grid endpoint-grid">
+<div class="field">
+<label for="startLocation">Start location</label>
+<div class="inline-row">
+<input autocomplete="off" id="startLocation" type="text" value="Sacramento, California"/>
+<button class="btn-light" id="setStartBtn" type="button">Set start</button>
+</div>
+<div aria-live="polite" class="status" id="startStatus" role="status"></div>
+</div>
+<div class="field">
+<label for="endLocation">End location</label>
+<div class="inline-row">
+<input autocomplete="off" id="endLocation" type="text" value="Sacramento, California"/>
+<button class="btn-light" id="setEndBtn" type="button">Set end</button>
+</div>
+<div class="button-row endpoint-actions">
+<button class="btn-light btn-small" id="copyStartToEndBtn" type="button">Use start as end</button>
+</div>
+<div aria-live="polite" class="status" id="endStatus" role="status"></div>
+</div>
+</div>
+<p class="helper full">Set each endpoint independently, or use <strong>Use start as end</strong> for a round trip. If you type a new endpoint and immediately create or rebuild the route, the planner will resolve it automatically. <strong>Trip locations are limited to North and South America.</strong></p>
+<div class="field">
+<label for="mustSee">Required must-see locations</label>
+<textarea id="mustSee" placeholder="Enter one place per line, or separate places with commas. Examples: Redwood National and State Parks, Bodie, Lake Tahoe"></textarea>
+<p class="helper">Every recognized location entered here is required in the route. Unmatched places are searched through OpenStreetMap before the route is built.</p>
+</div>
+<div class="field">
+<label for="historyInterests">History interests</label>
+<textarea id="historyInterests" placeholder="Examples: Gold Rush, Native history, missions, railroads"></textarea>
+</div>
+<div class="field">
+<label for="sceneryInterests">Park and scenery interests</label>
+<textarea id="sceneryInterests" placeholder="Examples: volcanoes, coast, desert, redwoods, easy hikes"></textarea>
+</div>
+<div class="field">
+<label for="excludePlaces">Places to exclude</label>
+<textarea id="excludePlaces" placeholder="Examples: Yosemite, Las Vegas, long desert drives"></textarea>
+</div>
+<div class="field">
+<label for="planningNotes">Other planning notes</label>
+<textarea id="planningNotes" placeholder="Examples: family trip, hikes under 3 miles, prefer two-night stays"></textarea>
+</div>
+<div class="form-grid">
+<div class="field">
+<label for="tripDays">Maximum trip days</label>
+<input id="tripDays" max="45" min="2" step="1" type="number" value="10"/>
+</div>
+<div class="field">
+<label for="maxMiles">Maximum miles per travel day</label>
+<input id="maxMiles" max="900" min="50" step="10" type="number" value="300"/>
+</div>
+<div class="field">
+<label for="maxHours">Maximum driving hours per travel day</label>
+<input id="maxHours" max="14" min="1" step="0.5" type="number" value="5.5"/>
+</div>
+<div class="field">
+<label for="lodgingWindowPercent">Overnight stop mileage flexibility (%)</label>
+<input aria-describedby="lodgingWindowHelp" id="lodgingWindowPercent" inputmode="decimal" max="25" min="0" step="1" type="number" value="10"/>
+<p class="helper" id="lodgingWindowHelp">Allows the planner to favor a larger lodging city slightly before or after the mileage target. At 400 miles and 10%, acceptable stops may fall between about 360 and 440 miles.</p>
+</div>
+<div class="field">
+<label for="pace">Preferred pace</label>
+<select id="pace">
+<option value="fast">Fast</option>
+<option selected="" value="balanced">Balanced</option>
+<option value="relaxed">Relaxed</option>
+</select>
+</div>
+<div class="field full">
+<label for="emphasis">Trip emphasis</label>
+<select id="emphasis">
+<option selected="" value="balanced">Balanced</option>
+<option value="history">History</option>
+<option value="parks">National parks and scenery</option>
+<option value="fewerHotels">Fewer hotel changes</option>
+</select>
+</div>
+</div>
+<div class="button-row">
+<button class="btn-primary" id="createIdeasBtn" type="button">Create from my ideas</button>
+<button class="btn-secondary" id="randomTripBtn" type="button">Random trip from parameters</button>
+</div>
+<div aria-live="polite" class="status" id="plannerStatus" role="status"></div>
+</div></section>
+<section class="card collapsible-card enhancement-card" data-default-open="true" data-section-id="enhanced-schedule" data-enhanced-card="schedule" data-app-tab="plan">
+  <div class="collapsible-heading">
+    <div class="collapsible-title-wrap"><h2>Schedule, vehicle &amp; route preferences</h2></div>
+    <div class="collapsible-heading-actions"><span class="section-chip">Advanced planning</span><button aria-expanded="true" class="section-toggle" data-section-toggle="enhanced-schedule" type="button"><span class="toggle-label">Hide</span><span aria-hidden="true" class="toggle-chevron">▴</span></button></div>
+  </div>
+  <div class="collapsible-body">
+    <h3 class="enhancement-subheading" style="border-top:0;padding-top:0;margin-top:0">Calendar and arrival planning</h3>
+    <div class="compact-grid three">
+      <div class="field"><label for="departureDate">Departure date (optional)</label><input id="departureDate" type="date"></div>
+      <div class="field"><label for="dailyDepartureTime">Daily departure</label><input id="dailyDepartureTime" type="time" value="08:00"></div>
+      <div class="field"><label for="latestArrivalTime">Latest preferred arrival</label><input id="latestArrivalTime" type="time" value="18:00"></div>
+      <div class="field"><label for="breakEveryHours">Break after driving</label><input id="breakEveryHours" type="number" min="1" max="5" step="0.5" value="2.5"><p class="helper">Hours of continuous driving.</p></div>
+      <div class="field"><label for="breakMinutes">Typical break</label><input id="breakMinutes" type="number" min="5" max="60" step="5" value="15"><p class="helper">Minutes.</p></div>
+      <div class="field"><label for="mealBreakMinutes">Travel-day meal break</label><input id="mealBreakMinutes" type="number" min="0" max="120" step="5" value="45"><p class="helper">Added to drives over four hours.</p></div>
+    </div>
+
+    <h3 class="enhancement-subheading">Vehicle and fuel planning</h3>
+    <div class="compact-grid three">
+      <div class="field"><label for="vehicleMpg">Vehicle fuel economy</label><input id="vehicleMpg" type="number" min="5" max="100" step="0.5" value="22"><p class="helper">Miles per gallon.</p></div>
+      <div class="field"><label for="tankGallons">Tank capacity</label><input id="tankGallons" type="number" min="3" max="100" step="0.5" value="18"><p class="helper">Gallons.</p></div>
+      <div class="field"><label for="fuelReservePercent">Fuel reserve</label><input id="fuelReservePercent" type="number" min="0" max="50" step="1" value="15"><p class="helper">Percent kept in reserve.</p></div>
+      <div class="field"><label for="fuelPrice">Planning fuel price</label><input id="fuelPrice" type="number" min="0" max="20" step="0.05" value="4.00"><p class="helper">Dollars per gallon.</p></div>
+      <div class="field"><label for="maxFuelGap">Maximum preferred fuel gap</label><input id="maxFuelGap" type="number" min="25" max="700" step="10" value="250"><p class="helper">Miles between fuel opportunities.</p></div>
+      <div class="field"><label for="routeStyle">Route preference</label><select id="routeStyle"><option value="fastest">Fastest</option><option value="scenic">Scenic / avoid highways</option><option value="avoidTolls">Avoid tolls</option><option value="avoidCities">Avoid major cities</option><option value="gentlerRoads">Fewer mountain roads</option></select></div>
+    </div>
+    <p class="route-style-note">The embedded road line uses the fastest public OSRM route. Route preference changes comparison links and planning guidance; verify scenic, toll, city, and mountain-road alternatives in your navigation app.</p>
+    <div class="fuel-metrics" id="fuelPlanningMetrics"><div class="fuel-metric"><strong>Build a route</strong><span>Fuel range and estimated cost will appear here.</span></div></div>
+    <div class="button-wrap" style="margin-top:9px">
+      <button class="btn-light btn-small" id="findFuelLongestLegBtn" type="button">Find fuel on longest leg</button>
+      <button class="btn-light btn-small" id="compareWholeRouteBtn" type="button">Compare whole route</button>
+    </div>
+  </div>
+</section>
+
+<section class="hidden" id="postRouteControls">
+<section aria-labelledby="route-actions-title" class="card collapsible-card" data-default-open="true" data-section-id="route"><div class="collapsible-heading"><div class="collapsible-title-wrap"><h2 id="route-actions-title">Route controls</h2></div><div class="collapsible-heading-actions"><span class="section-chip">Route tools</span><button aria-controls="route-section-body" aria-expanded="true" class="section-toggle" data-section-toggle="route" type="button"><span class="toggle-label">Hide</span><span aria-hidden="true" class="toggle-chevron">▴</span></button></div></div><div class="collapsible-body" id="route-section-body">
+
+<div class="button-row">
+<button class="btn-primary" id="rebuildBtn" type="button">Build suggested plan</button>
+<button class="btn-light" id="resetBtn" type="button">Reset route</button>
+</div>
+<p class="small-note">Rebuilding keeps custom places as required stops and rebalances the rest of the trip.</p>
+</div></section>
+
+<section aria-labelledby="route-assistant-title" class="card collapsible-card" data-default-open="true" data-section-id="route-assistant"><div class="collapsible-heading"><div class="collapsible-title-wrap"><h2 id="route-assistant-title">Ask about the route</h2></div><div class="collapsible-heading-actions"><span class="section-chip">Fuel + discoveries</span><button aria-controls="route-assistant-section-body" aria-expanded="true" class="section-toggle" data-section-toggle="route-assistant" type="button"><span class="toggle-label">Hide</span><span aria-hidden="true" class="toggle-chevron">▴</span></button></div></div><div class="collapsible-body" id="route-assistant-section-body">
+<p class="route-assistant-intro">Select a driving leg and ask what is available along the actual road route. Use <strong>Add to drive day</strong> for fuel, meals, restrooms, or brief attractions; it appears in the itinerary without reserving a full destination day. Interesting places and lodging can also be added as full destinations, which reroutes the trip. Results do not include live fuel prices, inventory, hours, or availability.</p>
+<div class="field">
+<label for="routeQuestionLeg">Driving leg to explore</label>
+<select id="routeQuestionLeg"><option value="">Create a route first</option></select>
+</div>
+<div aria-label="Quick route questions" class="route-quick-queries">
+<button class="btn-light" data-route-quick="fuel" type="button">⛽ Fuel</button>
+<button class="btn-light" data-route-quick="food" type="button">Food &amp; coffee</button>
+<button class="btn-light" data-route-quick="interesting" type="button">Interesting stops</button>
+<button class="btn-light" data-route-quick="restroom" type="button">Restrooms</button>
+<button class="btn-light" data-route-quick="grocery" type="button">Groceries</button>
+<button class="btn-light" data-route-quick="ev" type="button">EV charging</button>
+<button class="btn-light" data-route-quick="lodging" type="button">Lodging</button>
+</div>
+<div class="field">
+<label for="routeQuestion">What would you like to find?</label>
+<input autocomplete="off" id="routeQuestion" placeholder="Example: Fuel and something interesting between Elko and Salt Lake City" type="text"/>
+</div>
+<div class="route-query-grid">
+<div class="field">
+<label for="routeSearchRadius">Maximum distance from route</label>
+<select id="routeSearchRadius">
+<option value="3">3 miles</option>
+<option selected="" value="8">8 miles</option>
+<option value="15">15 miles</option>
+<option value="20">20 miles</option>
+</select>
+</div>
+<div class="field">
+<label for="routeSearchLimit">Results</label>
+<select id="routeSearchLimit">
+<option value="10">10</option>
+<option selected="" value="20">20</option>
+<option value="30">30</option>
+<option value="40">40</option>
+</select>
+</div>
+</div>
+<div class="button-row">
+<button class="btn-primary" id="askRouteBtn" type="button">Search this drive</button>
+<button class="btn-light" id="clearRouteSearchBtn" type="button">Clear results</button>
+</div>
+<div aria-live="polite" class="status" id="routeQuestionStatus" role="status"></div>
+<div class="route-search-fallback" id="routeQuestionFallback"></div>
+<div aria-live="polite" class="route-search-summary" id="routeQuestionSummary"></div>
+<div class="route-search-results" id="routeQuestionResults"></div>
+</div></section>
+<section aria-labelledby="summary-title" class="card collapsible-card" data-default-open="true" data-section-id="summary"><div class="collapsible-heading"><div class="collapsible-title-wrap"><h2 id="summary-title">Trip summary</h2></div><div class="collapsible-heading-actions"><span class="section-chip">At a glance</span><button aria-controls="summary-section-body" aria-expanded="true" class="section-toggle" data-section-toggle="summary" type="button"><span class="toggle-label">Hide</span><span aria-hidden="true" class="toggle-chevron">▴</span></button></div></div><div class="collapsible-body" id="summary-section-body">
+
+<div id="summaryContent"></div>
+</div></section>
+<section aria-labelledby="itinerary-title" class="card collapsible-card" data-default-open="true" data-section-id="itinerary" id="mobileItineraryAnchor"><div class="collapsible-heading"><div class="collapsible-title-wrap"><h2 id="itinerary-title">Itinerary</h2></div><div class="collapsible-heading-actions"><span class="section-chip">Drive + full days</span><button aria-controls="itinerary-section-body" aria-expanded="true" class="section-toggle" data-section-toggle="itinerary" type="button"><span class="toggle-label">Hide</span><span aria-hidden="true" class="toggle-chevron">▴</span></button></div></div><div class="collapsible-body" id="itinerary-section-body">
+
+<p class="helper">Travel days are shown separately from full destination days, so arrival and departure time is not counted as a full park day.</p>
+<div id="itineraryContent"></div>
+</div></section>
+<section class="card collapsible-card enhancement-card" data-default-open="true" data-section-id="enhanced-exports" data-enhanced-card="exports" data-app-tab="itinerary">
+  <div class="collapsible-heading">
+    <div class="collapsible-title-wrap"><h2>Export, print &amp; daily navigation</h2></div>
+    <div class="collapsible-heading-actions"><span class="section-chip">Take it with you</span><button aria-expanded="true" class="section-toggle" data-section-toggle="enhanced-exports" type="button"><span class="toggle-label">Hide</span><span aria-hidden="true" class="toggle-chevron">▴</span></button></div>
+  </div>
+  <div class="collapsible-body">
+    <div class="export-calendar-setup">
+      <div class="field"><label for="exportDepartureDate">Calendar departure date</label><input id="exportDepartureDate" type="date"></div>
+      <p class="helper">Calendar events use this date. It stays synchronized with the departure date in the planning section. On a phone, the calendar file can be shared to Calendar or saved to Files.</p>
+    </div>
+    <div class="button-wrap">
+      <button class="btn-primary btn-small" id="printTripBtn" type="button">Print / save formatted PDF</button>
+      <button class="btn-light btn-small" id="exportCsvBtn" type="button">Export CSV</button>
+      <button class="btn-light btn-small" id="exportCalendarBtn" type="button">Export / add calendar (.ics)</button>
+      <button class="btn-light btn-small" id="exportTextBtn" type="button">Export family itinerary</button>
+    </div>
+    <div class="export-preview-grid" id="exportPreviewGrid"></div>
+    <h3 class="enhancement-subheading">Daily navigation links</h3>
+    <p class="helper">Each travel day opens separately so long trips do not exceed navigation waypoint limits. Planned drive-day stops are included when possible.</p>
+    <div class="daily-link-list" id="dailyNavigationLinks"><p class="helper">Build a route to create daily links.</p></div>
+    <div class="status" id="exportStatus" role="status" aria-live="polite"></div>
+    <div class="download-ready-area" id="exportDownloadArea" role="status" aria-live="polite"></div>
+  </div>
+</section>
+
+<section aria-labelledby="custom-title" class="card collapsible-card is-collapsed" data-default-open="false" data-section-id="custom"><div class="collapsible-heading"><div class="collapsible-title-wrap"><h2 id="custom-title">Custom Ideas</h2></div><div class="collapsible-heading-actions"><span class="section-chip">Optional</span><button aria-controls="custom-section-body" aria-expanded="false" class="section-toggle" data-section-toggle="custom" type="button"><span class="toggle-label">Show</span><span aria-hidden="true" class="toggle-chevron">▾</span></button></div></div><div class="collapsible-body" hidden="" id="custom-section-body">
+
+<form id="customPlaceForm">
+<div class="field">
+<label for="customPlaceName">Place name</label>
+<input id="customPlaceName" placeholder="Example: Empire Mine State Historic Park" required="" type="text"/>
+<p class="helper">Custom destinations must be in North or South America.</p>
+</div>
+<div class="field">
+<label for="customDescription">Description or reason for visiting</label>
+<textarea id="customDescription" placeholder="Optional"></textarea>
+</div>
+<div class="field">
+<label for="customDays">Full days at the stop</label>
+<input id="customDays" max="10" min="1" step="1" type="number" value="1"/>
+</div>
+<button class="btn-gold" id="customSubmitBtn" type="submit">Find and add custom place</button>
+</form>
+<div aria-live="polite" class="status" id="geocodeStatus" role="status"></div>
+<div aria-live="polite" class="hidden" id="geocodeChoices"></div>
+</div></section>
+<section aria-labelledby="suggestions-title" class="card collapsible-card is-collapsed" data-default-open="false" data-section-id="suggestions"><div class="collapsible-heading"><div class="collapsible-title-wrap"><h2 id="suggestions-title">Suggested stops</h2></div><div class="collapsible-heading-actions"><span class="section-chip">Optional</span><button aria-controls="suggestions-section-body" aria-expanded="false" class="section-toggle" data-section-toggle="suggestions" type="button"><span class="toggle-label">Show</span><span aria-hidden="true" class="toggle-chevron">▾</span></button></div></div><div class="collapsible-body" hidden="" id="suggestions-section-body">
+
+<p class="helper">These remain available after route creation. Additions are inserted where they increase estimated mileage the least.</p>
+<div id="suggestionsContent"></div>
+</div></section>
+</section>
+<section class="card collapsible-card enhancement-card" data-default-open="false" data-section-id="enhanced-service" data-enhanced-card="service" data-app-tab="explore">
+  <div class="collapsible-heading">
+    <div class="collapsible-title-wrap"><h2>Service status &amp; diagnostics</h2></div>
+    <div class="collapsible-heading-actions"><span class="section-chip">Reliability</span><button aria-expanded="false" class="section-toggle" data-section-toggle="enhanced-service" type="button"><span class="toggle-label">Show</span><span aria-hidden="true" class="toggle-chevron">▾</span></button></div>
+  </div>
+  <div class="collapsible-body" hidden>
+    <div class="service-grid" id="serviceStatusGrid"></div>
+    <div class="button-wrap" style="margin-top:9px">
+      <button class="btn-light btn-small" id="retryRoadRouteBtn" type="button">Retry road route</button>
+      <button class="btn-light btn-small" id="retryRouteSearchBtn" type="button">Retry selected route search</button>
+      <button class="btn-light btn-small" id="clearServiceCachesBtn" type="button">Clear service caches</button>
+    </div>
+    <div class="diagnostic-log" id="diagnosticLog">No diagnostic messages yet.</div>
+  </div>
+</section>
+
+</section>
+<div aria-label="Resize trip-planning panel" aria-orientation="vertical" aria-valuemax="720" aria-valuemin="360" aria-valuenow="500" class="panel-resizer" id="panelResizer" role="separator" tabindex="0" title="Drag to resize the planner panel. Use the arrow keys for small adjustments or double-click to reset."></div>
+<section aria-label="Interactive trip map" class="map-panel" id="tripMapTop">
+<div aria-label="Map of candidate and selected road-trip stops" id="map" role="application"></div>
+<div class="map-fallback" id="mapFallback">
+        The interactive map could not initialize. Open the HTTPS-hosted version in a full browser. A local-file copy uses a route-only offline canvas.
+      </div>
+<div class="map-message" id="mapMessage" role="alert"></div>
+<div aria-label="Map actions" class="map-toolbar"><button aria-pressed="false" class="btn-small" id="togglePlannerBtn" type="button">Map focus</button>
+<button class="btn-small" id="zoomRouteBtn" type="button">Full-route zoom</button>
+<button class="btn-small" id="mapRetryRoadBtn" type="button" hidden>Retry road route</button>
+<button class="btn-small" id="zoomUsStopsBtn" type="button">U.S. stop overview</button>
+</div>
+<nav class="mobile-map-actions" aria-label="Mobile map shortcut">
+  <button class="btn-light" id="mobileLegendToggleBtn" type="button" aria-pressed="false">Map legend</button>
+</nav>
+</section>
+</main>
+<script src="assets/js/vendor/00-mini-leaflet-fallback.js"></script>
+<script src="assets/js/core/10-candidate-data.js"></script>
+<script src="assets/js/core/20-geographic-scope.js"></script>
+<script src="assets/js/core/30-known-estimates-and-state.js"></script>
+<script src="assets/js/core/40-safety-and-input.js"></script>
+<script src="assets/js/core/50-distance-and-routing.js"></script>
+<script src="assets/js/core/60-ranking-and-planning.js"></script>
+<script src="assets/js/core/70-route-assistant.js"></script>
+<script src="assets/js/core/80-map-rendering.js"></script>
+<script src="assets/js/core/90-ui-rendering.js"></script>
+<script src="assets/js/core/100-route-editing-and-state.js"></script>
+<script src="assets/js/core/110-geocoding.js"></script>
+<script src="assets/js/core/120-event-wiring.js"></script>
+<script src="assets/js/core/130-panel-resizer.js"></script>
+<script src="assets/js/core/140-collapsible-sections.js"></script>
+<script src="assets/js/features/200-enhancements.js"></script>
+
+<script src="assets/js/features/210-mobile-reliability.js"></script>
+
+</body>
+</html>
